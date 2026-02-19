@@ -1,0 +1,57 @@
+{
+    "$schema": "https://aka.ms/terminal-profiles-schema",
+    "copyFormatting": "none",
+    "copyOnSelect": false,
+    "defaultProfile": "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}",
+    
+    "profiles": {
+        "defaults": {
+            "colorScheme": "Lethal-Midnight",
+            "cursorShape": "filledBox",
+            "font": {
+                "cellHeight": "1.1",
+                "face": "BlexMono Nerd Font Mono",
+                "size": 11
+            },
+            "opacity": 96,
+            "padding": "12, 12, 12, 12",
+            "useAcrylic": false
+        },
+        "list": [] 
+    },
+
+    "schemes": [
+        {
+            "name": "Lethal-Midnight",
+            "background": "#0D0D0D",
+            "foreground": "#EBDBB2",
+            "cursorColor": "#FFFFFF",
+            "selectionBackground": "#3E3D32",
+            "black": "#282828",
+            "red": "#FB4934",
+            "green": "#B8BB26",
+            "yellow": "#FABD2F",
+            "blue": "#83A598",
+            "purple": "#D3869B",
+            "cyan": "#8EC07C",
+            "white": "#EBDBB2",
+            "brightBlack": "#928374",
+            "brightRed": "#CC241D",
+            "brightGreen": "#98971A",
+            "brightYellow": "#D79921",
+            "brightBlue": "#458588",
+            "brightPurple": "#B16286",
+            "brightCyan": "#689D6A",
+            "brightWhite": "#A89984"
+        }
+    ],
+
+    "actions": [
+        { "id": "Terminal.SplitPaneRight", "keys": "ctrl+shift+e" },
+        { "id": "Terminal.SplitPaneDown", "keys": "ctrl+shift+o" },
+        { "id": "Terminal.CopyToClipboard", "keys": "ctrl+c" },
+        { "id": "Terminal.PasteFromClipboard", "keys": "ctrl+v" },
+        { "id": "Terminal.FindText", "keys": "ctrl+shift+f" },
+        { "id": "Terminal.DuplicatePaneAuto", "keys": "alt+shift+d" }
+    ]
+}

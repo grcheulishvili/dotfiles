@@ -1,144 +1,99 @@
--- Cross-Platform Neovim Config
--- Documentation & Mappings: https://github.com/GoldnRam/my_configs/blob/main/README.md
+-- Path: %LOCALAPPDATA%\nvim\init.lua
 
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
--- 1. DYNAMIC PATH HANDLING (Linux & Windows 11)
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-local data_path = vim.fn.stdpath('data') .. '/site/plugged'
-local Plug = vim.fn['plug#']
+-------------------------------------------------------------------------------
+-- 1. PURE PERFORMANCE (Zero Backups, No Delays)
+-------------------------------------------------------------------------------
+vim.opt.backup = false
+vim.opt.writebackup = false
+vim.opt.swapfile = false
+vim.opt.undofile = true      -- Undo history persists after closing file
+vim.opt.shada = ""           -- Faster startup: skip loading old history junk
+vim.opt.updatetime = 50      -- Faster UI updates
+vim.opt.timeoutlen = 300     -- Faster key combo response
+vim.opt.synmaxcol = 500      -- Prevent freeze on long lines
 
-vim.call('plug#begin', data_path)
-
-Plug 'junegunn/fzf'
-Plug 'junegunn/fzf.vim'
-Plug 'tpope/vim-commentary'
-Plug 'tpope/vim-surround'
-Plug 'airblade/vim-gitgutter'
-Plug 'sjl/badwolf'
-Plug 'vim-airline/vim-airline'
-Plug 'fatih/vim-go'
-Plug ('neoclide/coc.nvim', {branch = 'release'})
-Plug 'preservim/nerdtree'
-
-vim.call('plug#end')
-
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
--- 2. SYSTEM SETTINGS
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-vim.g.mapleader = ','
+-------------------------------------------------------------------------------
+-- 2. LETHAL UI & WORD WRAP
+-------------------------------------------------------------------------------
 vim.opt.number = true
-vim.opt.relativenumber = true  -- The "Counting Fix"
-vim.opt.scrolloff = 8          -- Keep context when scrolling
-vim.opt.mouse = 'a'
-vim.opt.hlsearch = true
-vim.opt.ignorecase = true
-vim.opt.smartcase = true       -- Case sensitive if capital used
-vim.opt.expandtab = true       -- Use spaces
-vim.opt.shiftwidth = 4
-vim.opt.tabstop = 4
-vim.opt.hidden = true          -- Switch buffers without saving
-vim.opt.timeoutlen = 1000
-vim.cmd('syntax on')
-pcall(vim.cmd, 'colorscheme badwolf')
+vim.opt.relativenumber = true
+vim.opt.cursorline = true
+vim.opt.termguicolors = true
+vim.opt.clipboard = "unnamedplus" -- Windows Clipboard sync
 
--- Windows-specific Shell Configuration
-if vim.fn.has('win32') == 1 then
-    vim.opt.shell = 'powershell.exe'
-    vim.opt.shellcmdflag = '-NoLogo -NoProfile -ExecutionPolicy RemoteSigned -Command'
+-- Focused Word Wrap
+vim.opt.wrap = true
+vim.opt.linebreak = true      -- Don't break words in half
+vim.opt.breakindent = true    -- Maintain indent on wrapped lines
+
+-- Hide UI Clutter
+vim.opt.laststatus = 0        -- Hide status line for focus
+vim.opt.showmode = false      -- Hide "-- INSERT --" text
+vim.opt.ruler = false         -- Hide line/column coordinates
+
+-------------------------------------------------------------------------------
+-- 3. WINDOWS POWERSHELL OPTIMIZATION
+-------------------------------------------------------------------------------
+if vim.fn.executable('pwsh') == 1 then
+    vim.opt.shell = 'pwsh'
+    vim.opt.shellcmdflag = "-NoLogo -NoProfile -ExecutionPolicy RemoteSigned -Command [Console]::InputEncoding=[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;"
+else
+    vim.opt.shell = 'powershell'
 end
 
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
--- 3. KEYMAPPINGS
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-local function map(mode, lhs, rhs, opts)
-    vim.keymap.set(mode, lhs, rhs, opts or {silent = true})
-end
+-------------------------------------------------------------------------------
+-- 4. NATIVE THEME (MATCHES TERMINAL SCHEME)
+-------------------------------------------------------------------------------
+vim.cmd("syntax on")
+vim.cmd("filetype plugin indent on")
+vim.cmd("colorscheme habamax")
 
--- Project Navigation (Fuzzy Finder)
-map('n', '<leader>f', ':Files<CR>')
-map('n', '<leader>g', ':Rg<CR>')
-map('n', '<leader>b', ':Buffers<CR>')
-map('n', '<F3>', ':NERDTreeToggle<CR>')
+-- Transparency: Adopt the Terminal's background and 90% opacity
+vim.api.nvim_set_hl(0, "Normal", { bg = "NONE", fg = "#EBDBB2" })
+vim.api.nvim_set_hl(0, "NormalFloat", { bg = "NONE" })
+vim.api.nvim_set_hl(0, "SignColumn", { bg = "NONE" })
 
--- LSP / Code Intelligence
-map('n', 'gd', '<Plug>(coc-definition)')     -- Jump to code
-map('n', 'gr', '<Plug>(coc-references)')     -- Find all usages
-map('n', 'K', ":call CocActionAsync('doHover')<CR>")
-map('n', '[g', '<Plug>(coc-diagnostic-prev)') -- Jump to previous error
-map('n', ']g', '<Plug>(coc-diagnostic-next)') -- Jump to next error
-map('n', '<leader>a', '<Plug>(coc-codeaction-cursor)') -- Quick Fix
-
--- Autocomplete Logic (Tab to navigate, Enter to confirm)
-function _G.check_back_space()
-    local col = vim.fn.col('.') - 1
-    return col == 0 or vim.fn.getline('.'):sub(col, col):match('%s') ~= nil
-end
-
-local opts = {expr = true, replace_keycodes = false}
-map("i", "<Tab>", 'coc#pum#visible() ? coc#pum#next(1) : v:lua.check_back_space() ? "<Tab>" : coc#refresh()', opts)
-map("i", "<S-Tab>", [[coc#pum#visible() ? coc#pum#prev(1) : "\<C-h>"]], opts)
-map("i", "<cr>", [[coc#pum#visible() ? coc#pum#confirm() : "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"]], opts)
-map("i", "<c-space>", "coc#refresh()", opts)
-
--- Window Management
-map('n', '<leader>v', ':vsplit<CR>')
-map('n', '<leader>h', ':split<CR>')
-map('n', '<C-h>', '<C-w>h')
-map('n', '<C-j>', '<C-w>j')
-map('n', '<C-k>', '<C-w>k')
-map('n', '<C-l>', '<C-w>l')
-
--- Clear Highlights
-map('n', '<leader><space>', ':noh<CR>')
-
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
--- 4. TERMINAL DRAWER (Ctrl + \)
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-map('t', '<Esc>', [[<C-\><C-n>]]) -- Exit terminal mode
-
-function _G.toggle_terminal()
-    local term_buf = nil
-    for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-        if vim.bo[buf].buftype == 'terminal' then
-            term_buf = buf
-            break
-        end
-    end
-
-    if term_buf then
-        local term_win = vim.fn.bufwinnr(term_buf)
-        if term_win > 0 then
-            vim.cmd(term_win .. 'hide')
-        else
-            vim.cmd('botright split | buffer ' .. term_buf)
-            vim.cmd('resize 10')
-            vim.cmd('startinsert')
-        end
-    else
-        local shell = vim.fn.has('win32') == 1 and 'powershell.exe' or 'bash'
-        vim.cmd('botright 10split term://' .. shell)
-        vim.cmd('startinsert')
+-------------------------------------------------------------------------------
+-- 5. NATIVE LSP & AUTO-FORMATTING (0.11+)
+-------------------------------------------------------------------------------
+-- Enable LSP binaries if found in Windows PATH
+local servers = { "gopls", "pyright" }
+for _, lsp in ipairs(servers) do
+    if vim.fn.executable(lsp) == 1 then
+        vim.lsp.enable(lsp)
     end
 end
 
--- Mapped to Ctrl + \ (The standard terminal toggle)
-map('n', '<C-\\>', ':lua toggle_terminal()<CR>')
-map('t', '<C-\\>', [[<C-\><C-n>:lua toggle_terminal()<CR>]])
-
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
--- 5. LANGUAGE SPECIFICS (Go)
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-vim.g.go_def_mapping_enabled = 0
-vim.g.go_textobj_enabled = 0
-
--- LETHAL FIX: Use a split terminal for execution to prevent freezing
-vim.g.go_term_enabled = 1
-vim.g.go_term_mode = "split" 
-
-vim.api.nvim_create_autocmd("FileType", {
-    pattern = "go",
+-- Auto-format Go and Python files on Save
+vim.api.nvim_create_autocmd("BufWritePre", {
+    pattern = { "*.go", "*.py" },
     callback = function()
-        map('n', '<leader>r', '<Plug>(go-run)')
-        map('n', '<leader>t', '<Plug>(go-test)')
-    end
+        vim.lsp.buf.format({ async = false })
+    end,
 })
+
+-------------------------------------------------------------------------------
+-- 6. LETHAL KEYMAPS & NAVIGATION
+-------------------------------------------------------------------------------
+vim.g.mapleader = " "
+
+-- Fast Escape
+vim.keymap.set("i", "jk", "<Esc>")
+
+-- File Explorer (Netrw) - Lethal Side Panel
+vim.g.netrw_banner = 0
+vim.g.netrw_liststyle = 3
+vim.keymap.set('n', '<leader>e', ':Lexplore 25<CR>')
+
+-- LSP Keymaps
+vim.keymap.set('n', 'gd', vim.lsp.buf.definition, { desc = "Go to Definition" })
+vim.keymap.set('n', 'K', vim.lsp.buf.hover, { desc = "Hover Docs" })
+vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename, { desc = "Rename" })
+vim.keymap.set('n', '<leader>ca', vim.lsp.buf.code_action, { desc = "Code Action" })
+
+-- Visual Mode: Move selected blocks
+vim.keymap.set("v", "J", ":m '>+1<CR>gv=gv")
+vim.keymap.set("v", "K", ":m '<-2<CR>gv=gv")
+
+-- Clear Search Highlights
+vim.keymap.set("n", "<leader>h", ":nohlsearch<CR>")
