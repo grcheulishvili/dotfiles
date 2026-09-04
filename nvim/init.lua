@@ -1,70 +1,100 @@
--- Path: %LOCALAPPDATA%\nvim\init.lua
-
 -------------------------------------------------------------------------------
--- 1. PURE PERFORMANCE (Zero Backups, No Delays)
+-- 1. PERFORMANCE & CORE
 -------------------------------------------------------------------------------
 vim.opt.backup = false
 vim.opt.writebackup = false
 vim.opt.swapfile = false
-vim.opt.undofile = true      -- Undo history persists after closing file
-vim.opt.shada = ""           -- Faster startup: skip loading old history junk
-vim.opt.updatetime = 50      -- Faster UI updates
-vim.opt.timeoutlen = 300     -- Faster key combo response
-vim.opt.synmaxcol = 500      -- Prevent freeze on long lines
+vim.opt.undofile = true
+vim.opt.shada = ""
+vim.opt.updatetime = 50
+vim.opt.timeoutlen = 300
+vim.opt.synmaxcol = 500
 
 -------------------------------------------------------------------------------
--- 2. LETHAL UI & WORD WRAP
+-- 2. UI, DISPLAY & ENGAGEMENT TARGET
 -------------------------------------------------------------------------------
 vim.opt.number = true
 vim.opt.relativenumber = true
 vim.opt.cursorline = true
 vim.opt.termguicolors = true
-vim.opt.clipboard = "unnamedplus" -- Windows Clipboard sync
+vim.opt.clipboard = "unnamedplus"
 
--- Focused Word Wrap
 vim.opt.wrap = true
-vim.opt.linebreak = true      -- Don't break words in half
-vim.opt.breakindent = true    -- Maintain indent on wrapped lines
+vim.opt.linebreak = true
+vim.opt.breakindent = true
 
--- Hide UI Clutter
-vim.opt.laststatus = 0        -- Hide status line for focus
-vim.opt.showmode = false      -- Hide "-- INSERT --" text
-vim.opt.ruler = false         -- Hide line/column coordinates
+vim.opt.laststatus = 0
+vim.opt.showmode = false
+vim.opt.ruler = false
 
--------------------------------------------------------------------------------
--- 3. WINDOWS POWERSHELL OPTIMIZATION
--------------------------------------------------------------------------------
-if vim.fn.executable('pwsh') == 1 then
-    vim.opt.shell = 'pwsh'
-    vim.opt.shellcmdflag = "-NoLogo -NoProfile -ExecutionPolicy RemoteSigned -Command [Console]::InputEncoding=[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;"
-else
-    vim.opt.shell = 'powershell'
+-- Render Active Engagement Target in Statusline across Windows and Linux
+local target = vim.env.TARGET
+if target and target ~= "" then
+    vim.opt.statusline = "%#ErrorMsg# [TARGET: " .. target .. "] %*"
+    vim.opt.laststatus = 2
 end
 
 -------------------------------------------------------------------------------
--- 4. NATIVE THEME (MATCHES TERMINAL SCHEME)
+-- 3. CROSS-PLATFORM SHELL INTEROP
 -------------------------------------------------------------------------------
-vim.cmd("syntax on")
-vim.cmd("filetype plugin indent on")
-vim.cmd("colorscheme habamax")
+local is_windows = vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1
 
--- Transparency: Adopt the Terminal's background and 90% opacity
+if is_windows then
+    if vim.fn.executable("pwsh") == 1 then
+        vim.opt.shell = "pwsh"
+    else
+        vim.opt.shell = "powershell"
+    end
+    vim.opt.shellcmdflag = "-NoLogo -NoProfile -ExecutionPolicy RemoteSigned -Command [Console]::InputEncoding=[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;"
+    vim.opt.shellredir = "2>&1 | Out-File -Encoding UTF8 %s"
+    vim.opt.shellpipe = "2>&1 | Out-File -Encoding UTF8 %s"
+    vim.opt.shellquote = ""
+    vim.opt.shellxquote = ""
+else
+    vim.opt.shell = "/bin/bash"
+end
+
+-------------------------------------------------------------------------------
+-- 4. SYNTAX, THEME & TRANSPARENCY
+-------------------------------------------------------------------------------
+vim.opt.syntax = "on"
+vim.cmd("filetype plugin indent on")
+
+-- Apply color scheme safely
+pcall(vim.cmd, "colorscheme habamax")
+
+-- Treesitter highlighting fallback
+local ok, ts_config = pcall(require, "nvim-treesitter.configs")
+if ok then
+    ts_config.setup({
+        highlight = { enable = true },
+        indent = { enable = true },
+    })
+end
+
 vim.api.nvim_set_hl(0, "Normal", { bg = "NONE", fg = "#EBDBB2" })
 vim.api.nvim_set_hl(0, "NormalFloat", { bg = "NONE" })
 vim.api.nvim_set_hl(0, "SignColumn", { bg = "NONE" })
 
 -------------------------------------------------------------------------------
--- 5. NATIVE LSP & AUTO-FORMATTING (0.11+)
+-- 5. NATIVE LSP & AUTO-FORMATTING
 -------------------------------------------------------------------------------
--- Enable LSP binaries if found in Windows PATH
 local servers = { "gopls", "pyright" }
 for _, lsp in ipairs(servers) do
     if vim.fn.executable(lsp) == 1 then
-        vim.lsp.enable(lsp)
+        vim.api.nvim_create_autocmd("FileType", {
+            pattern = { lsp == "gopls" and "go" or "python" },
+            callback = function(args)
+                vim.lsp.start({
+                    name = lsp,
+                    cmd = { lsp },
+                    root_dir = vim.fs.root(args.buf, { ".git", "go.mod", "pyproject.toml", "setup.py" }),
+                })
+            end,
+        })
     end
 end
 
--- Auto-format Go and Python files on Save
 vim.api.nvim_create_autocmd("BufWritePre", {
     pattern = { "*.go", "*.py" },
     callback = function()
@@ -73,27 +103,27 @@ vim.api.nvim_create_autocmd("BufWritePre", {
 })
 
 -------------------------------------------------------------------------------
--- 6. LETHAL KEYMAPS & NAVIGATION
+-- 6. KEYMAPS & NAVIGATION
 -------------------------------------------------------------------------------
 vim.g.mapleader = " "
 
--- Fast Escape
 vim.keymap.set("i", "jk", "<Esc>")
 
--- File Explorer (Netrw) - Lethal Side Panel
+-- File Explorer (Netrw)
 vim.g.netrw_banner = 0
 vim.g.netrw_liststyle = 3
-vim.keymap.set('n', '<leader>e', ':Lexplore 25<CR>')
+vim.g.netrw_winsize = 25
+vim.keymap.set("n", "<leader>e", ":Lexplore<CR>", { silent = true })
 
--- LSP Keymaps
-vim.keymap.set('n', 'gd', vim.lsp.buf.definition, { desc = "Go to Definition" })
-vim.keymap.set('n', 'K', vim.lsp.buf.hover, { desc = "Hover Docs" })
-vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename, { desc = "Rename" })
-vim.keymap.set('n', '<leader>ca', vim.lsp.buf.code_action, { desc = "Code Action" })
+-- LSP Mappings
+vim.keymap.set("n", "gd", vim.lsp.buf.definition, { desc = "Go to Definition" })
+vim.keymap.set("n", "K", vim.lsp.buf.hover, { desc = "Hover Docs" })
+vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, { desc = "Rename" })
+vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, { desc = "Code Action" })
 
--- Visual Mode: Move selected blocks
+-- Visual Block Movement
 vim.keymap.set("v", "J", ":m '>+1<CR>gv=gv")
 vim.keymap.set("v", "K", ":m '<-2<CR>gv=gv")
 
--- Clear Search Highlights
+-- Search Highlights
 vim.keymap.set("n", "<leader>h", ":nohlsearch<CR>")
